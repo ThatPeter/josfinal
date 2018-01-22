@@ -76,6 +76,7 @@ KERN_BINFILES +=	user/idle \
 			user/pingpong \
 			user/pingpongs \
 			user/primes
+
 # Binary files for LAB5
 KERN_BINFILES +=	user/faultio\
 	      		user/spawnfaultio\

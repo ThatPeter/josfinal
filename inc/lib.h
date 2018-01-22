@@ -48,7 +48,7 @@ int	sys_cgetc(void);
 envid_t	sys_getenvid(void);
 int	sys_env_destroy(envid_t);
 void	sys_yield(void);
-static envid_t sys_exofork(void);
+static  envid_t sys_exofork(void);
 int	sys_env_set_status(envid_t env, int status);
 
 int	sys_env_set_trapframe(envid_t env, struct Trapframe *tf);
@@ -60,6 +60,9 @@ int	sys_page_map(envid_t src_env, void *src_pg,
 int	sys_page_unmap(envid_t env, void *pg);
 int	sys_ipc_try_send(envid_t to_env, uint32_t value, void *pg, int perm);
 int	sys_ipc_recv(void *rcv_pg);
+
+// lab 7 Multithreading
+int	sys_thread_create(uintptr_t func);
 
 // This must be inlined.  Exercise for reader: why?
 static inline envid_t __attribute__((always_inline))
@@ -80,7 +83,10 @@ envid_t	ipc_find_env(enum EnvType type);
 // fork.c
 #define	PTE_SHARE	0x400
 envid_t	fork(void);
-envid_t	sfork(void);	// Challenge!
+envid_t sfork(void);
+// Lab 7 Multithreading
+envid_t	thread_create(void (*func)());
+void    thread_join(uint32_t thread_id);
 
 // fd.c
 int	close(int fd);
@@ -120,6 +126,8 @@ int	pipeisclosed(int pipefd);
 // wait.c
 void	wait(envid_t env);
 
+// lab 7
+//void thread_create(void(*func)());
 
 /* File open modes */
 #define	O_RDONLY	0x0000		/* open for reading only */

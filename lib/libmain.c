@@ -16,6 +16,7 @@ libmain(int argc, char **argv)
 	thisenv = 0;
 
 	envid_t cur_env_id = sys_getenvid(); 
+	cprintf("IN LIBMAIN, CURENV ENV ID: %d\n", cur_env_id);
 	size_t i;
 	for (i = 0; i < NENV; i++) {
 		if (envs[i].env_id == cur_env_id) {

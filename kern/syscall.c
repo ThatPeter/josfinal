@@ -497,6 +497,17 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 	//panic("sys_env_set_trapframe not implemented");
 }
 
+// Lab 7 Multithreading 
+// zavola tvorbu noveho threadu (z env.c)
+envid_t	
+sys_thread_create(uintptr_t func)
+{
+	cprintf("in sys thread create, eip: %x\n", func);
+
+	envid_t id = thread_create(func);
+	return id;
+}	
+
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -548,6 +559,12 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 
 		case SYS_env_set_trapframe:
 			return sys_env_set_trapframe(a1, (struct Trapframe*)a2);
+
+// LAB 7 Multithreading
+		case SYS_thread_create:
+			//void (*func)() = (void(*)())a1;
+			//return sys_thread_create((void(*)())a1/*func*/);
+			return sys_thread_create((uintptr_t) a1);
 
 		default:
 			return -E_INVAL;

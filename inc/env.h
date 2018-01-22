@@ -44,7 +44,25 @@ enum EnvType {
 	ENV_TYPE_FS,		// File system server
 };
 
+enum ThreadStatus {
+	THREAD_RUNNING = 0,
+	THREAD_WAITING,
+	THREAD_FREE,
+	THREAD_TERMINATED
+};
+
+// LAB 7: Multithreading
+typedef envid_t thread_id;
+typedef uint32_t process_id;
+
 struct Env {
+
+	// LAB 7: Multithreading
+	process_id env_process_id;	// process id
+	struct Env *env_workers_link;	// link of worker threads
+
+	// enum ThreadStatus thread_status; 
+	//-------------------
 	struct Trapframe env_tf;	// Saved registers
 	struct Env *env_link;		// Next free Env
 	envid_t env_id;			// Unique environment identifier

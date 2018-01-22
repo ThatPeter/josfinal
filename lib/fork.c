@@ -154,10 +154,19 @@ fork(void)
 	//panic("fork not implemented");
 }
 
-// Challenge!
-int
+envid_t
 sfork(void)
 {
-	panic("sfork not implemented");
-	return -E_INVAL;
+	return 0;
+}
+/*Lab 7 Multithreading 
+produce a syscall to create a thread, return its id*/
+envid_t
+thread_create(void (*func)())
+{
+
+	cprintf("in fork.c thread create. func: %x\n", func);
+	envid_t id = sys_thread_create((uintptr_t )func);
+	cprintf("in fork.c thread create. func: %x\n", func);
+	return id;
 }

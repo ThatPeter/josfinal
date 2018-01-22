@@ -22,6 +22,12 @@ int	envid2env(envid_t envid, struct Env **env_store, bool checkperm);
 void	env_run(struct Env *e) __attribute__((noreturn));
 void	env_pop_tf(struct Trapframe *tf) __attribute__((noreturn));
 
+// Lab 7: Multithreading
+
+envid_t thread_create(uintptr_t func);
+void thread_join();
+int thread_self();
+
 // Without this extra macro, we couldn't pass macros like TEST to
 // ENV_CREATE because of the C pre-processor's argument prescan rule.
 #define ENV_PASTE3(x, y, z) x ## y ## z
@@ -34,3 +40,5 @@ void	env_pop_tf(struct Trapframe *tf) __attribute__((noreturn));
 	} while (0)
 
 #endif // !JOS_KERN_ENV_H
+
+

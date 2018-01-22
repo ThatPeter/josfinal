@@ -273,7 +273,12 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	env_free_list = e->env_link;
 	*newenv_store = e;
 
-	// cprintf("[%08x] new env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
+	// Lab 7 multithreading
+	// nastavme proces id ako env id, ak sa alokuje thread, prestavi si process id sam
+	// zoznam workerov nastavime ako prazdny
+	e->env_process_id = e->env_id;
+	e->env_workers_link = NULL;
+	cprintf("[%08x] new env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
 	return 0;
 }
 
@@ -489,7 +494,15 @@ env_destroy(struct Env *e)
 		e->env_status = ENV_DYING;
 		return;
 	}
-
+	cprintf("In env destroy, destroying env: %d\n", e->env_id); // for testing purposes
+	// prejdi cez zoznam workerov main threadu a znic ich 
+	struct Env *worker = e->env_workers_link;
+	if(e->env_workers_link) {
+		struct Env *to_free = worker;
+		worker = worker->env_workers_link;
+		env_free(to_free);
+	}
+	// znic main thread
 	env_free(e);
 
 	if (curenv == e) {
@@ -551,6 +564,8 @@ env_run(struct Env *e)
 	// LAB 3: Your code here.
         //
         // First call to env_run
+	cprintf("In env run, running env: %d\n", e->env_id);// can be commented - for testing purposes only
+
         if ((curenv != NULL) && (curenv->env_status == ENV_RUNNING))
                 curenv->env_status = ENV_RUNNABLE;
 
@@ -563,3 +578,30 @@ env_run(struct Env *e)
         unlock_kernel();
         env_pop_tf(&curenv->env_tf);
 }
+
+
+envid_t thread_create(uintptr_t func)
+{
+	print_trapframe(&curenv->env_tf); // can be commented - for testing purposes only
+	/*
+	Alokujeme si env, nastavime jeho adresny priestor na adresny priestor main threadu,
+	nastavime eip v tf na funkciu, ktora sa ma vykonavat (func),
+	alokujeme miesto pre zasobnik a nastavime esp aby ukazoval na vrchol,
+	nastavime alokovany env (thread) ako runnable a nastavime jeho process id (env_id 
+	main threadu), vratine env id
+	*/
+	struct Env *e;
+	env_alloc(&e, 0);
+	e->env_pgdir = curenv->env_pgdir;
+	e->env_tf.tf_eip = func;
+	
+	region_alloc(e, (void *) (USTACKTOP - (4*PGSIZE)), PGSIZE);
+	e->env_tf.tf_esp = USTACKTOP - (3*PGSIZE);
+	e->env_workers_link = curenv->env_workers_link;
+	curenv->env_workers_link = e;
+	e->env_status = ENV_RUNNABLE;
+	e->env_process_id = curenv->env_process_id; // resp. env_id ?
+	cprintf("in thread create: thread process id: %d\n", e->env_process_id);
+	return e->env_id;
+}
+
