@@ -63,6 +63,9 @@ int	sys_ipc_recv(void *rcv_pg);
 
 // lab 7 Multithreading
 int	sys_thread_create(uintptr_t func);
+void 	sys_thread_free(envid_t envid);
+
+extern volatile uintptr_t eip;
 
 // This must be inlined.  Exercise for reader: why?
 static inline envid_t __attribute__((always_inline))
@@ -87,6 +90,7 @@ envid_t sfork(void);
 // Lab 7 Multithreading
 envid_t	thread_create(void (*func)());
 void    thread_join(uint32_t thread_id);
+void 	thread_main(/*uintptr_t eip*/);
 
 // fd.c
 int	close(int fd);
@@ -126,8 +130,6 @@ int	pipeisclosed(int pipefd);
 // wait.c
 void	wait(envid_t env);
 
-// lab 7
-//void thread_create(void(*func)());
 
 /* File open modes */
 #define	O_RDONLY	0x0000		/* open for reading only */

@@ -127,9 +127,6 @@
 // Top of normal user stack
 #define USTACKTOP	(UTOP - 2*PGSIZE)
 
-// Lab 7 
-#define USTACKGAP PGSIZE
-#define USTKSIZE PGSIZE
 // Where user programs generally begin
 #define UTEXT		(2*PTSIZE)
 

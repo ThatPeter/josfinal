@@ -7,6 +7,7 @@
 // It is one of the bits explicitly allocated to user processes (PTE_AVAIL).
 #define PTE_COW		0x800
 
+volatile uintptr_t eip;
 //
 // Custom page fault handler - if faulting page is copy-on-write,
 // map in our own private writable copy.
@@ -164,9 +165,12 @@ produce a syscall to create a thread, return its id*/
 envid_t
 thread_create(void (*func)())
 {
-
+	eip = (uintptr_t )func;
 	cprintf("in fork.c thread create. func: %x\n", func);
-	envid_t id = sys_thread_create((uintptr_t )func);
+	//envid_t id = sys_thread_create((uintptr_t )func);
+	//uintptr_t funct = (uintptr_t)threadmain;
+	envid_t id = sys_thread_create((uintptr_t)thread_main);
 	cprintf("in fork.c thread create. func: %x\n", func);
 	return id;
+	//return 0;
 }

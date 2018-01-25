@@ -19,6 +19,7 @@ enum {
 	SYS_ipc_recv,
 // LAB 7 multithreading
 	SYS_thread_create,
+	SYS_thread_free,
 //-------------------------------
 	NSYSCALLS
 };

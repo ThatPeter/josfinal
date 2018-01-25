@@ -24,7 +24,10 @@ void	env_pop_tf(struct Trapframe *tf) __attribute__((noreturn));
 
 // Lab 7: Multithreading
 
+extern struct FreeStacks* thread_free_stacks;
+
 envid_t thread_create(uintptr_t func);
+void thread_free(struct Env* e);
 void thread_join();
 int thread_self();
 

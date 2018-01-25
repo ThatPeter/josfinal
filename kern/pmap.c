@@ -109,8 +109,9 @@ boot_alloc(uint32_t n)
                 return nextfree;
 
         // We only have 4MB of memory available
-        if (4 * 1024 * 1024 - PADDR(nextfree) < n)
+        if (4 * 1024 * 1024 - PADDR(nextfree) < n) 
                panic("boot_alloc: ran out of free memory"); 
+	cprintf("in boot alloc: free mem: %d\n",(4 * 1024 * 1024 - PADDR(nextfree)));
 
         result = nextfree;        
         nextfree = ROUNDUP((char *) (nextfree + n), PGSIZE);
@@ -167,6 +168,13 @@ mem_init(void)
         const size_t envs_size = sizeof(struct Env) * NENV;
         envs = (struct Env *) boot_alloc(envs_size);
         memset(envs, 0, envs_size);
+	
+	//Lab 7: Multithreading
+	/*Alloc place for the free stack stacks stacking*/
+
+	const size_t stack_size = sizeof(struct FreeStacks) * MAX_THREADS;
+	thread_free_stacks = (struct FreeStacks*) boot_alloc(stack_size);
+	memset(thread_free_stacks, 0, stack_size);
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set

@@ -508,6 +508,15 @@ sys_thread_create(uintptr_t func)
 	return id;
 }	
 
+
+void 	
+sys_thread_free(envid_t envid)
+{
+	struct Env* e;
+	envid2env(envid, &e, 0);
+	thread_free(e);
+}
+
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -565,6 +574,10 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 			//void (*func)() = (void(*)())a1;
 			//return sys_thread_create((void(*)())a1/*func*/);
 			return sys_thread_create((uintptr_t) a1);
+
+		case SYS_thread_free:
+			sys_thread_free((envid_t)a1);
+			return 0;
 
 		default:
 			return -E_INVAL;

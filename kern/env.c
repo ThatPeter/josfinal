@@ -19,6 +19,30 @@ struct Env *envs = NULL;		// All environments
 static struct Env *env_free_list;	// Free environment list
 					// (linked by Env->env_link)
 
+/*LAB 7:multithreading*/
+struct FreeStacks* thread_free_stacks = NULL; //free stacks for threads
+static struct FreeStacks* free_stacks_stack;
+
+
+void stack_push(uint32_t id)
+{	
+	thread_free_stacks[id].next_stack = free_stacks_stack;
+        free_stacks_stack = &thread_free_stacks[id];
+}
+
+struct FreeStacks* stack_pop()
+{
+	struct FreeStacks* ret = free_stacks_stack;
+	free_stacks_stack = free_stacks_stack->next_stack;
+	
+	return ret;
+}
+
+
+
+
+
+//-------------------------------
 #define ENVGENSHIFT	12		// >= LOGNENV
 
 // Global descriptor table.
@@ -127,6 +151,18 @@ env_init(void)
                 env_free_list = &envs[i];
         }
 
+	/*Lab 7: multithreading*/
+	uintptr_t ustacktop = 0xeebfe000;
+	uintptr_t THRDSTACKTOP = ustacktop - THRDSTKGAP;
+	uintptr_t STACKADDR = THRDSTACKTOP;
+
+	for (i = MAX_THREADS - 1; i >= 0 ; i--, STACKADDR -= (THRDSTKSIZE + THRDSTKGAP))
+	{	
+		thread_free_stacks[i].id = i;
+		thread_free_stacks[i].addr = STACKADDR;
+		thread_free_stacks[i].next_stack = free_stacks_stack;
+                free_stacks_stack = &thread_free_stacks[i];
+	}
 	// Per-CPU part of the initialization
 	env_init_percpu();
 }
@@ -278,6 +314,9 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	// zoznam workerov nastavime ako prazdny
 	e->env_process_id = e->env_id;
 	e->env_workers_link = NULL;
+	//e->env_threads_list->id = 0;
+	//e->env_threads_list->next = NULL;
+
 	cprintf("[%08x] new env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
 	return 0;
 }
@@ -500,7 +539,8 @@ env_destroy(struct Env *e)
 	if(e->env_workers_link) {
 		struct Env *to_free = worker;
 		worker = worker->env_workers_link;
-		env_free(to_free);
+		//env_free(to_free);
+		thread_free(to_free);
 	}
 	// znic main thread
 	env_free(e);
@@ -574,29 +614,73 @@ env_run(struct Env *e)
         curenv->env_runs++;
 
         lcr3(PADDR(curenv->env_pgdir));
-
         unlock_kernel();
         env_pop_tf(&curenv->env_tf);
 }
 
+/*Lab 7 : mulithreading*/
 
-envid_t thread_create(uintptr_t func)
+void
+thread_destroy(struct Env *e)
 {
-	print_trapframe(&curenv->env_tf); // can be commented - for testing purposes only
-	/*
+	//asi ani nebude potrebne, vsetko co treba sa spravi v thread free 
+}
+
+// funkcia znici thread, v pripade ze curenv je nastaveny na thread ktory sme prave znicili
+// tak odovzdame riadenie
+// na nicenie threadov nemozeme pouzivat env destroy respektive env free, pretoze
+// sa tam nici vsetko co dany proces vyuziva vratane env_pgdir!!! A vieme ze env pgdir je 
+// pri multithreadingu zdielany, takze by sme efektivne znicili env pgdir aj pre ostatne worker 
+// thready a aj pre main thread, cize po prepnuti do jedneho z tychto threadov
+// sa potom sposobuje velmi nepekny triple fault
+void 
+thread_free(struct Env* e)
+{
+	cprintf("In thread free, freeing thread: %d\n", e->env_id); 
+	// hod jej esp adresu na zoznam volnych stackov pre thready
+	stack_push(e->env_stack_id);
+
+	e->env_pgdir = 0;
+	e->env_status = ENV_FREE;
+	e->env_link = env_free_list;
+	env_free_list = e;
+	if (curenv == e) {
+		curenv = NULL;
+		sched_yield();
+	}
+}
+
+/*	Funkcia vytvori novy env (thread), nastavi potrebne parametre a vrati id envu(threadu)
 	Alokujeme si env, nastavime jeho adresny priestor na adresny priestor main threadu,
 	nastavime eip v tf na funkciu, ktora sa ma vykonavat (func),
 	alokujeme miesto pre zasobnik a nastavime esp aby ukazoval na vrchol,
 	nastavime alokovany env (thread) ako runnable a nastavime jeho process id (env_id 
 	main threadu), vratine env id
+
+napad:  alokovanie zasobnikov - zasobnik s adresami vrcholov neobsadenych zasobnikov. Pri vytvoreni 		threadu sa popne, pri zniceni threadu pushne.
 	*/
+envid_t thread_create(uintptr_t func)
+{
+	print_trapframe(&curenv->env_tf); // can be commented - for testing purposes only
+	
 	struct Env *e;
 	env_alloc(&e, 0);
 	e->env_pgdir = curenv->env_pgdir;
+	
+	//region_alloc(e, (void *) (USTACKTOP - (4*PGSIZE)), PGSIZE);
+	//e->env_tf.tf_esp = USTACKTOP - (3*PGSIZE);
+	/*get a free thread stack address from the free stacks stack*/
+	struct FreeStacks* stack = stack_pop();
+	e->env_stack_id = stack->id; 
+	region_alloc(e, (void*)(stack->addr - PGSIZE), PGSIZE);
+	e->env_tf.tf_esp = stack->addr;
+
 	e->env_tf.tf_eip = func;
 	
-	region_alloc(e, (void *) (USTACKTOP - (4*PGSIZE)), PGSIZE);
-	e->env_tf.tf_esp = USTACKTOP - (3*PGSIZE);
+
+
+	//e->env_threads_list->id = e->env_id;
+	//e->env_threads_list->next
 	e->env_workers_link = curenv->env_workers_link;
 	curenv->env_workers_link = e;
 	e->env_status = ENV_RUNNABLE;
