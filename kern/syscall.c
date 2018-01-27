@@ -517,6 +517,12 @@ sys_thread_free(envid_t envid)
 	thread_free(e);
 }
 
+void 	
+sys_thread_join(envid_t envid) 
+{
+	thread_join(envid);
+}
+
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -569,14 +575,16 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		case SYS_env_set_trapframe:
 			return sys_env_set_trapframe(a1, (struct Trapframe*)a2);
 
-// LAB 7 Multithreading
+		// LAB 7 Multithreading
 		case SYS_thread_create:
-			//void (*func)() = (void(*)())a1;
-			//return sys_thread_create((void(*)())a1/*func*/);
 			return sys_thread_create((uintptr_t) a1);
 
 		case SYS_thread_free:
 			sys_thread_free((envid_t)a1);
+			return 0;
+
+		case SYS_thread_join:
+			sys_thread_join((envid_t)a1);
 			return 0;
 
 		default:

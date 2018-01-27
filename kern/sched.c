@@ -36,7 +36,7 @@ sched_yield(void)
 	} else {
 		i = ENVX(curenv->env_id) + 1;
 	}
-	// Lab 7 Multithreading: scheduler verzia 1.0 
+	/*
 	for (; i < NENV; i++) {
 		if (envs[i].env_status == ENV_RUNNABLE) {
 			env_run(&envs[i]);
@@ -50,48 +50,45 @@ sched_yield(void)
 			env_run(&envs[j]);
 		} 
 	}
-	// Lab 7 Multithreading: scheduler verzia 2.0 (neviem ktoru nakoniec pouzit)
-	// tento pracuje tak, ze ak narazi na worker thread, tak sa pozrie ci main thread
-	// este existuje (je runnable alebo running), ak ano tak sa spusti ak nie
-	// tak sa znici
-	/*
+*/
+	
+	// Lab 7 Multithreading: scheduler verzia 2.0 
 	for (; i < NENV; i++) {
 		if (envs[i].env_status == ENV_RUNNABLE) {
-			if (envs[i].env_process_id == envs[i].env_id) {
-				env_run(&envs[i]);
-			}
-			if (envs[i].env_process_id != envs[i].env_id) {
-				struct Env main_thread = envs[ENVX(envs[i].env_process_id)];
-				if (main_thread.env_status == ENV_RUNNING || 
-				    main_thread.env_status == ENV_RUNNABLE)
+			if (envs[i].env_id == envs[i].env_process_id) {
+				cprintf("in sched c: process id %d == %d envid\n\n",envs			[i].env_process_id, envs[i].env_id);
+				//ak sa jedna o main thread
+				if (envs[i].env_waiting) { // ak caka, chod dalej
+					continue;
+					cprintf("in sched c: %d waiting\n\n", envs[i].env_id);
+				} else {	// ak necaka tak ho spusti
+					cprintf("in sched c: %d running\n\n", envs[i].env_id);
 					env_run(&envs[i]);
-				else
-					env_destroy(&envs[i]);
+				}
+			} else {	// ak sa nejedna o main thread, kludne spusti
+				env_run(&envs[i]);
 			}
 		} 
 	}
 
 	size_t j;
-
 	for (j = 0; j < i; j++) {
 		if (envs[j].env_status == ENV_RUNNABLE) {
-			if (envs[j].env_process_id == envs[j].env_id) {
+			if (envs[j].env_id == envs[j].env_process_id) {
+				//ak sa jedna o main thread
+				if (envs[j].env_waiting) { // ak caka, chod dalej
+					continue;
+				} else {	// ak necaka tak ho spusti
+					env_run(&envs[j]);
+				}
+			} else {	// ak sa nejedna o main thread, kludne spusti
 				env_run(&envs[j]);
 			}
-			if (envs[j].env_process_id != envs[j].env_id) {
-				struct Env main_thread = envs[ENVX(envs[j].env_process_id)];
-				if (main_thread.env_status == ENV_RUNNING || 
-				    main_thread.env_status == ENV_RUNNABLE)
-					env_run(&envs[j]);
-				else
-					env_destroy(&envs[j]);
-			}
 		} 
-	}*/
+	}
 	if (curenv && (curenv->env_status == ENV_RUNNING)) {
 		env_run(curenv);
 	}
-
 	// sched_halt never returns
 	sched_halt();
 }

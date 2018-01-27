@@ -28,8 +28,7 @@ extern struct FreeStacks* thread_free_stacks;
 
 envid_t thread_create(uintptr_t func);
 void thread_free(struct Env* e);
-void thread_join();
-int thread_self();
+void thread_join(envid_t envid);
 
 // Without this extra macro, we couldn't pass macros like TEST to
 // ENV_CREATE because of the C pre-processor's argument prescan rule.

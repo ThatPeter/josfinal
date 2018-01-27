@@ -172,3 +172,16 @@ thread_create(void (*func)())
 	cprintf("in fork.c thread create. func: %x\n", func);
 	return id;
 }
+
+void 	
+thread_interrupt(envid_t thread_id) 
+{
+	sys_thread_free(thread_id);
+}
+
+void 
+thread_join(envid_t thread_id) 
+{
+	sys_thread_join(thread_id);
+}
+

@@ -313,10 +313,12 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	// nastavme proces id ako env id, ak sa alokuje thread, prestavi si process id sam
 	// zoznam workerov nastavime ako prazdny
 	e->env_process_id = e->env_id;
+	e->env_waiting = false;
 	int i;
 	for(i = 0; i < MAX_PROCESS_THREADS; i++)
 	{
-		e->worker_threads[i] = 0;		
+		e->worker_threads[0][i] = 0;	
+		e->worker_threads[1][i] = 0;		
 	}
 	
 
@@ -564,8 +566,8 @@ env_destroy(struct Env *e)
 	int i;
 	for(i = 0; i < MAX_PROCESS_THREADS; i++)
 	{
-		if(e->worker_threads[i] != 0) {
-			thread_destroy(&envs[ENVX(e->worker_threads[i])]);	
+		if(e->worker_threads[0][i] != 0) {
+			thread_destroy(&envs[ENVX(e->worker_threads[0][i])]);	
 		}
 	}
 	// znic main thread
@@ -665,14 +667,25 @@ thread_free(struct Env* e)
 
 	int i;
 	for(i = 0; i < MAX_PROCESS_THREADS; i++) {
-		if(main_thrd->worker_threads[i] == e->env_id) {
-			main_thrd->worker_threads[i] = 0;	
+		if(main_thrd->worker_threads[0][i] == e->env_id) {
+			main_thrd->worker_threads[0][i] = 0;	
+			main_thrd->worker_threads[1][i] = 0;
 			break;
 		}
 		if(i == MAX_PROCESS_THREADS - 1) {
-			// no such worker thread registered- should NOT happen
+			panic("environment is not a worker thread of env E - THIS SHOULD NOT 				      HAPPEN\n");
 		}
 	}
+
+	for(i = 0; i < MAX_PROCESS_THREADS; i++) {
+		if (main_thrd->worker_threads[1][i] == THREAD_WAIT) {
+			break;
+		} 
+		if (i == MAX_PROCESS_THREADS-1) {
+			main_thrd->env_waiting = false;
+		}
+	}
+
 	e->env_pgdir = 0;
 	e->env_status = ENV_FREE;
 	e->env_link = env_free_list;
@@ -692,7 +705,8 @@ thread_free(struct Env* e)
 
 napad:  alokovanie zasobnikov - zasobnik s adresami vrcholov neobsadenych zasobnikov. Pri vytvoreni 		threadu sa popne, pri zniceni threadu pushne. //hotovo
 	*/
-envid_t thread_create(uintptr_t func)
+envid_t 
+thread_create(uintptr_t func)
 {
 	print_trapframe(&curenv->env_tf); // can be commented - for testing purposes only
 	
@@ -709,8 +723,8 @@ envid_t thread_create(uintptr_t func)
 	int i;
 	for(i = 0; i < MAX_PROCESS_THREADS; i++)
 	{
-		if(curenv->worker_threads[i] == 0) {
-			curenv->worker_threads[i] = e->env_id;	
+		if(curenv->worker_threads[0][i] == 0) {
+			curenv->worker_threads[0][i] = e->env_id;	
 			break;
 		}
 		if(i == MAX_PROCESS_THREADS - 1) {
@@ -719,8 +733,31 @@ envid_t thread_create(uintptr_t func)
 	}
 
 	e->env_status = ENV_RUNNABLE;
-	e->env_process_id = curenv->env_process_id; // resp. env_id ?
+	e->env_process_id = curenv->env_process_id; 
 	cprintf("in thread create: thread process id: %d\n", e->env_process_id);
 	return e->env_id;
+}
+
+void 
+thread_join(envid_t envid)
+{
+	struct Env* worker = &envs[ENVX(envid)];
+	struct Env* main_thrd = &envs[ENVX(worker->env_process_id)];
+
+	cprintf("in system call THREAD JOIN id: %d \n\n", envid);
+	/*najdi worker thread, nastav jeho stav na nenulovy (waiting)*/
+	int i;
+	for(i = 0; i < MAX_PROCESS_THREADS; i++) {
+		if(main_thrd->worker_threads[0][i] == envid) {
+			main_thrd->worker_threads[1][i] = THREAD_WAIT;	
+			break;
+		}
+		if(i == MAX_PROCESS_THREADS - 1) {
+			// no such thread
+			return;
+		}
+	}
+	main_thrd->env_waiting = true;
+	sched_yield();
 }
 

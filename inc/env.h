@@ -46,7 +46,6 @@ enum EnvType {
 
 
 // LAB 7: Multithreading
-typedef envid_t thread_id;
 typedef uint32_t process_id;
 
 #define THRDSTKSIZE 		PGSIZE
@@ -59,22 +58,20 @@ struct FreeStacks {
 	struct FreeStacks* next_stack;
 };
 
-struct Threads {
-		envid_t id;	
-		struct Threads* next;
-		struct Threads* prev;
-};
-
 #define MAX_PROCESS_THREADS 	10
+#define THREAD_WAIT		1
+#define THREAD_FREE		0
+
 
 struct Env {
 	
 	// LAB 7: Multithreading
 	process_id env_process_id;	// process id
 	uint32_t env_stack_id;		// id of the stack used for this env/thread
-	bool waiting; 			// prototype for thread join
-	uint32_t worker_threads[MAX_PROCESS_THREADS];
-	//-------------------
+	int32_t worker_threads[2][MAX_PROCESS_THREADS];// array containing thread ids of the
+	// environments worker threads + registers if they are to be waited for
+	bool env_waiting;
+	//-------------------				
 	struct Trapframe env_tf;	// Saved registers
 	struct Env *env_link;		// Next free Env
 	envid_t env_id;			// Unique environment identifier

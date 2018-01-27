@@ -64,6 +64,7 @@ int	sys_ipc_recv(void *rcv_pg);
 // lab 7 Multithreading
 int	sys_thread_create(uintptr_t func);
 void 	sys_thread_free(envid_t envid);
+void 	sys_thread_join(envid_t envid);
 
 extern volatile uintptr_t eip;
 
@@ -88,8 +89,10 @@ envid_t	ipc_find_env(enum EnvType type);
 envid_t	fork(void);
 envid_t sfork(void);
 // Lab 7 Multithreading
-envid_t	thread_create(void (*func)());
-void    thread_join(uint32_t thread_id);
+envid_t	thread_create(void (*func)());	
+void    thread_join(envid_t thread_id);
+void 	thread_interrupt(envid_t thread_id);
+
 void 	thread_main();
 
 // fd.c

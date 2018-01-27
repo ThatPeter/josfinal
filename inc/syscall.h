@@ -20,6 +20,7 @@ enum {
 // LAB 7 multithreading
 	SYS_thread_create,
 	SYS_thread_free,
+	SYS_thread_join,
 //-------------------------------
 	NSYSCALLS
 };

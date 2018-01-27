@@ -132,4 +132,9 @@ sys_thread_free(envid_t envid)
  	syscall(SYS_thread_free, 0, envid, 0, 0, 0, 0);
 }
 
+void 	
+sys_thread_join(envid_t envid) 
+{
+	syscall(SYS_thread_join, 0, envid, 0, 0, 0, 0);
+}
 
