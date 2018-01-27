@@ -59,20 +59,21 @@ struct FreeStacks {
 	struct FreeStacks* next_stack;
 };
 
-
-
-
-struct Env {/*
-	struct Threads {
+struct Threads {
 		envid_t id;	
 		struct Threads* next;
-	};*/
+		struct Threads* prev;
+};
 
+#define MAX_PROCESS_THREADS 	10
+
+struct Env {
+	
 	// LAB 7: Multithreading
 	process_id env_process_id;	// process id
-	struct Env *env_workers_link;	// link of worker threads
-	uint32_t env_stack_id;
-	//struct Threads* env_threads_list;
+	uint32_t env_stack_id;		// id of the stack used for this env/thread
+	bool waiting; 			// prototype for thread join
+	uint32_t worker_threads[MAX_PROCESS_THREADS];
 	//-------------------
 	struct Trapframe env_tf;	// Saved registers
 	struct Env *env_link;		// Next free Env

@@ -90,7 +90,7 @@ envid_t sfork(void);
 // Lab 7 Multithreading
 envid_t	thread_create(void (*func)());
 void    thread_join(uint32_t thread_id);
-void 	thread_main(/*uintptr_t eip*/);
+void 	thread_main();
 
 // fd.c
 int	close(int fd);

@@ -167,10 +167,8 @@ thread_create(void (*func)())
 {
 	eip = (uintptr_t )func;
 	cprintf("in fork.c thread create. func: %x\n", func);
-	//envid_t id = sys_thread_create((uintptr_t )func);
-	//uintptr_t funct = (uintptr_t)threadmain;
+	
 	envid_t id = sys_thread_create((uintptr_t)thread_main);
 	cprintf("in fork.c thread create. func: %x\n", func);
 	return id;
-	//return 0;
 }

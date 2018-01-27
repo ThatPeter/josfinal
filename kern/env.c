@@ -313,9 +313,13 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	// nastavme proces id ako env id, ak sa alokuje thread, prestavi si process id sam
 	// zoznam workerov nastavime ako prazdny
 	e->env_process_id = e->env_id;
-	e->env_workers_link = NULL;
-	//e->env_threads_list->id = 0;
-	//e->env_threads_list->next = NULL;
+	int i;
+	for(i = 0; i < MAX_PROCESS_THREADS; i++)
+	{
+		e->worker_threads[i] = 0;		
+	}
+	
+
 
 	cprintf("[%08x] new env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
 	return 0;
@@ -518,6 +522,28 @@ env_free(struct Env *e)
 	env_free_list = e;
 }
 
+//Lab 7: Multithreading 
+// pouzivane env_destroyom pre nicenie vsetkych worker threadov
+// narozdiel od thread free neprechadza po poli v main threade a nenuluje pole wokrer
+// threadov (je to zbytocne, kedze main thread sa ide znicit)
+void
+thread_destroy(struct Env *e)
+{
+	cprintf("In thread destroy, thread: %d\n", e->env_id); 
+	// hod jej esp adresu na zoznam volnych stackov pre thready
+	stack_push(e->env_stack_id);
+	
+	e->env_pgdir = 0;
+	e->env_status = ENV_FREE;
+	e->env_link = env_free_list;
+	env_free_list = e;
+
+	if (curenv == e) {
+		curenv = NULL;
+		sched_yield();
+	}
+}
+
 //
 // Frees environment e.
 // If e was the current env, then runs a new environment (and does not return
@@ -534,13 +560,13 @@ env_destroy(struct Env *e)
 		return;
 	}
 	cprintf("In env destroy, destroying env: %d\n", e->env_id); // for testing purposes
-	// prejdi cez zoznam workerov main threadu a znic ich 
-	struct Env *worker = e->env_workers_link;
-	if(e->env_workers_link) {
-		struct Env *to_free = worker;
-		worker = worker->env_workers_link;
-		//env_free(to_free);
-		thread_free(to_free);
+	/*prejdi cez pole worker threadov a znic ich*/
+	int i;
+	for(i = 0; i < MAX_PROCESS_THREADS; i++)
+	{
+		if(e->worker_threads[i] != 0) {
+			thread_destroy(&envs[ENVX(e->worker_threads[i])]);	
+		}
 	}
 	// znic main thread
 	env_free(e);
@@ -620,11 +646,7 @@ env_run(struct Env *e)
 
 /*Lab 7 : mulithreading*/
 
-void
-thread_destroy(struct Env *e)
-{
-	//asi ani nebude potrebne, vsetko co treba sa spravi v thread free 
-}
+
 
 // funkcia znici thread, v pripade ze curenv je nastaveny na thread ktory sme prave znicili
 // tak odovzdame riadenie
@@ -639,7 +661,18 @@ thread_free(struct Env* e)
 	cprintf("In thread free, freeing thread: %d\n", e->env_id); 
 	// hod jej esp adresu na zoznam volnych stackov pre thready
 	stack_push(e->env_stack_id);
+	struct Env* main_thrd = &envs[ENVX(e->env_process_id)];
 
+	int i;
+	for(i = 0; i < MAX_PROCESS_THREADS; i++) {
+		if(main_thrd->worker_threads[i] == e->env_id) {
+			main_thrd->worker_threads[i] = 0;	
+			break;
+		}
+		if(i == MAX_PROCESS_THREADS - 1) {
+			// no such worker thread registered- should NOT happen
+		}
+	}
 	e->env_pgdir = 0;
 	e->env_status = ENV_FREE;
 	e->env_link = env_free_list;
@@ -657,7 +690,7 @@ thread_free(struct Env* e)
 	nastavime alokovany env (thread) ako runnable a nastavime jeho process id (env_id 
 	main threadu), vratine env id
 
-napad:  alokovanie zasobnikov - zasobnik s adresami vrcholov neobsadenych zasobnikov. Pri vytvoreni 		threadu sa popne, pri zniceni threadu pushne.
+napad:  alokovanie zasobnikov - zasobnik s adresami vrcholov neobsadenych zasobnikov. Pri vytvoreni 		threadu sa popne, pri zniceni threadu pushne. //hotovo
 	*/
 envid_t thread_create(uintptr_t func)
 {
@@ -667,22 +700,24 @@ envid_t thread_create(uintptr_t func)
 	env_alloc(&e, 0);
 	e->env_pgdir = curenv->env_pgdir;
 	
-	//region_alloc(e, (void *) (USTACKTOP - (4*PGSIZE)), PGSIZE);
-	//e->env_tf.tf_esp = USTACKTOP - (3*PGSIZE);
-	/*get a free thread stack address from the free stacks stack*/
 	struct FreeStacks* stack = stack_pop();
 	e->env_stack_id = stack->id; 
 	region_alloc(e, (void*)(stack->addr - PGSIZE), PGSIZE);
 	e->env_tf.tf_esp = stack->addr;
-
 	e->env_tf.tf_eip = func;
-	
 
+	int i;
+	for(i = 0; i < MAX_PROCESS_THREADS; i++)
+	{
+		if(curenv->worker_threads[i] == 0) {
+			curenv->worker_threads[i] = e->env_id;	
+			break;
+		}
+		if(i == MAX_PROCESS_THREADS - 1) {
+			// cant create any more threads - rollback
+		}
+	}
 
-	//e->env_threads_list->id = e->env_id;
-	//e->env_threads_list->next
-	e->env_workers_link = curenv->env_workers_link;
-	curenv->env_workers_link = e;
 	e->env_status = ENV_RUNNABLE;
 	e->env_process_id = curenv->env_process_id; // resp. env_id ?
 	cprintf("in thread create: thread process id: %d\n", e->env_process_id);

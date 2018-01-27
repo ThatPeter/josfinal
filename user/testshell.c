@@ -10,7 +10,6 @@ void func()
 	{
 		cprintf("HI\n");
 	}
-	//sys_thread_free(sys_getenvid());
 }
 
 
