@@ -1,6 +1,8 @@
 #ifndef JOS_INC_SPINLOCK_H
 #define JOS_INC_SPINLOCK_H
 
+//#ifndef JOS_INC_MUTEXLOCK_H
+//#define JOS_INC_MUTEXLOCK_H
 #include <inc/types.h>
 
 // Comment this to disable spinlock debugging
@@ -18,6 +20,30 @@ struct spinlock {
 	                       // that locked the lock.
 #endif
 };
+
+
+/*struct mutexlock {
+	unsigned locked;       // Is the lock held?
+
+//#ifdef DEBUG_MUTEXLOCK
+	// For debugging:
+	// mozno staci v env zadefinovat    char *state;            // Name of lock.
+	
+	
+	struct CpuInfo *cpu;   // The CPU holding the lock.
+	uintptr_t pcs[10];     // The call stack (an array of program counters)
+	                       // that locked the lock.
+	struct Env *owner_thread;
+//#endif
+	struct queue {		// queue for waiting threads
+		int data;
+		struct queue *next;
+	} *head=NULL;*tail=NULL;
+	
+};
+
+void mutex_lock(struct mutexlock *lk);
+void mutex_unlock(struct mutexlock *lk);*/
 
 void __spin_initlock(struct spinlock *lk, char *name);
 void spin_lock(struct spinlock *lk);

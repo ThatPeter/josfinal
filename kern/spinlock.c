@@ -7,7 +7,11 @@
 #include <inc/string.h>
 #include <kern/cpu.h>
 #include <kern/spinlock.h>
+//#include <kern/mutexlock.h>
 #include <kern/kdebug.h>
+
+//Lab 7: Multithreading
+struct Env *owner_thread;	// thread
 
 // The big kernel lock
 struct spinlock kernel_lock = {
@@ -114,3 +118,78 @@ spin_unlock(struct spinlock *lk)
 	// gcc will not reorder C statements across the xchg.
 	xchg(&lk->locked, 0);
 }
+
+//LAB 7: Multithreading
+
+
+//vlozenie threadu do fronty
+/*static void 
+queue_insert(struct mutexlock *lk)
+{
+	struct queue *newItem; //nie som si ista ci je to dobry zapis
+	lk->newItem=(struct queue*)malloc(sizeof(struct queue)); //s lk ??
+	lk->newItem->data = thread->env_id; //musim tam mat lk, vsak
+	lk->newItem->next = NULL;
+	if(lk->queue->head == NULL)
+		lk->queue->head = lk->queue->tail = newItem;
+	else {
+		lk->queue->head->next = newItem;
+		lk->queue->tail = newItem;
+	}
+	lk->owner_thread->env_id = ENV_RUNNABLE; //thread je vlozeny do fronty, caka
+	printf("\n thread je vo fronte \n");
+}
+
+//odobratie threadu z fronty
+static void 
+queue_remove(struct mutexlock *lk)
+{
+	if(lk->queue->head == NULL)
+		printf("\n Fronta je prazdna\n");
+	else {
+		struct queue *pom = lk->queue->head;	//inicializujem to dobre?
+		lk->queue->head = lk->queue->head->next;
+		free(pom);
+		lk->owner_thread->env_status = ENV_RUNNING;  //uz nie je vo fronte, lebo mal volny pristup, bezi
+		printf("\n thread uz nie je vo fronte\n");	
+	}	
+	
+}
+
+int
+mutex_init(struct mutexlock *lk, ....nieco)
+{
+	ak sa podari{
+		return 0;
+	}
+	return -1;
+}
+
+int
+mutex_lock(struct mutexlock *lk)
+{
+
+	if (xchg(&lk->locked, 1) == 0){
+		lk->locked=1;
+		lk->owner_thread->env_status = ENV_RUNNING; 
+		lk->cpu = thiscpu;
+		get_caller_pcs(lk->pcs);
+	}
+	else
+		queue_insert(lk);
+	
+	return lk->locked;
+}
+
+int
+mutex_unlock(struct mutexlock *lk)
+{
+	if (lk->queue->head == NULL){
+		lk->locked=0;
+		xchg(&lk->locked, 0);
+	}
+	else
+		queue_remove(lk);
+
+	return lk->locked;
+}*/
