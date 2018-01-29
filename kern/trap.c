@@ -302,10 +302,14 @@ trap(struct Trapframe *tf)
 		lock_kernel();
 
 		assert(curenv);
-
+		/*Lab 7: Multithreading*/
 		// Garbage collect if current enviroment is a zombie
 		if (curenv->env_status == ENV_DYING) {
-			env_free(curenv);
+			if (curenv->env_id == curenv->env_process_id) {
+			 	env_free(curenv);
+			} else {
+				curenv->env_status = ENV_FREE;
+			}
 			curenv = NULL;
 			sched_yield();
 		}

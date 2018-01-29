@@ -38,10 +38,6 @@ struct FreeStacks* stack_pop()
 	return ret;
 }
 
-
-
-
-
 //-------------------------------
 #define ENVGENSHIFT	12		// >= LOGNENV
 
@@ -153,7 +149,7 @@ env_init(void)
 
 	/*Lab 7: multithreading*/
 	uintptr_t ustacktop = 0xeebfe000;
-	uintptr_t THRDSTACKTOP = ustacktop - THRDSTKGAP;
+	uintptr_t THRDSTACKTOP = ustacktop - PGSIZE - THRDSTKGAP;
 	uintptr_t STACKADDR = THRDSTACKTOP;
 
 	for (i = MAX_THREADS - 1; i >= 0 ; i--, STACKADDR -= (THRDSTKSIZE + THRDSTKGAP))
@@ -314,14 +310,13 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	// zoznam workerov nastavime ako prazdny
 	e->env_process_id = e->env_id;
 	e->env_waiting = false;
+
 	int i;
 	for(i = 0; i < MAX_PROCESS_THREADS; i++)
 	{
 		e->worker_threads[0][i] = 0;	
 		e->worker_threads[1][i] = 0;		
 	}
-	
-
 
 	cprintf("[%08x] new env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
 	return 0;
@@ -539,6 +534,17 @@ thread_destroy(struct Env *e)
 	e->env_status = ENV_FREE;
 	e->env_link = env_free_list;
 	env_free_list = e;
+
+	/*prejdi vsetky cpu a vymaz z nich env ktory mazeme*/
+	size_t i;
+	for (i = 0; i < NCPU; i++) {
+		cprintf("in thread destroy: %d\n", i);
+		/*ak ma env*/cprintf("cpus[i] curenv: %x\n", cpus[i].cpu_env);
+		if ((cpus[i].cpu_env) && (cpus[i].cpu_env->env_id == e->env_id)) {
+			cpus[i].cpu_env->env_status = ENV_DYING;
+		}
+		
+	}
 
 	if (curenv == e) {
 		curenv = NULL;

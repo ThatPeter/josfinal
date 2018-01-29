@@ -29,7 +29,6 @@ sched_yield(void)
 	// below to halt the cpu.
 
 	// LAB 4: Your code here.
-	cprintf ("IN SCHED.C YIELDING\n\n");
 	size_t i;
 	if (!curenv) {
 		i = 0;
@@ -51,41 +50,6 @@ sched_yield(void)
 		} 
 	}
 
-	
-	// Lab 7 Multithreading: scheduler verzia 2.0 
-	/*for (; i < NENV; i++) {
-		if (envs[i].env_status == ENV_RUNNABLE) {
-			if (envs[i].env_id == envs[i].env_process_id) {
-				cprintf("in sched c: process id %d == %d envid\n\n",envs			[i].env_process_id, envs[i].env_id);
-				//ak sa jedna o main thread
-				if (envs[i].env_waiting) { // ak caka, chod dalej
-					continue;
-					cprintf("in sched c: %d waiting\n\n", envs[i].env_id);
-				} else {	// ak necaka tak ho spusti
-					cprintf("in sched c: %d running\n\n", envs[i].env_id);
-					env_run(&envs[i]);
-				}
-			} else {	// ak sa nejedna o main thread, kludne spusti
-				env_run(&envs[i]);
-			}
-		} 
-	}
-
-	size_t j;
-	for (j = 0; j < i; j++) {
-		if (envs[j].env_status == ENV_RUNNABLE) {
-			if (envs[j].env_id == envs[j].env_process_id) {
-				//ak sa jedna o main thread
-				if (envs[j].env_waiting) { // ak caka, chod dalej
-					continue;
-				} else {	// ak necaka tak ho spusti
-					env_run(&envs[j]);
-				}
-			} else {	// ak sa nejedna o main thread, kludne spusti
-				env_run(&envs[j]);
-			}
-		} 
-	}*/
 	if (curenv && (curenv->env_status == ENV_RUNNING)) {
 		env_run(curenv);
 	}
