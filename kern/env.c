@@ -682,7 +682,7 @@ thread_free(struct Env* e)
 			break;
 		} 
 		if (i == MAX_PROCESS_THREADS-1) {
-			main_thrd->env_waiting = false;
+			main_thrd->env_status = ENV_RUNNABLE;
 		}
 	}
 
@@ -757,7 +757,7 @@ thread_join(envid_t envid)
 			return;
 		}
 	}
-	main_thrd->env_waiting = true;
+	main_thrd->env_status = ENV_NOT_RUNNABLE;
 	sched_yield();
 }
 

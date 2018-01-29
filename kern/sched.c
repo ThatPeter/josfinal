@@ -36,7 +36,7 @@ sched_yield(void)
 	} else {
 		i = ENVX(curenv->env_id) + 1;
 	}
-	/*
+	
 	for (; i < NENV; i++) {
 		if (envs[i].env_status == ENV_RUNNABLE) {
 			env_run(&envs[i]);
@@ -50,10 +50,10 @@ sched_yield(void)
 			env_run(&envs[j]);
 		} 
 	}
-*/
+
 	
 	// Lab 7 Multithreading: scheduler verzia 2.0 
-	for (; i < NENV; i++) {
+	/*for (; i < NENV; i++) {
 		if (envs[i].env_status == ENV_RUNNABLE) {
 			if (envs[i].env_id == envs[i].env_process_id) {
 				cprintf("in sched c: process id %d == %d envid\n\n",envs			[i].env_process_id, envs[i].env_id);
@@ -85,7 +85,7 @@ sched_yield(void)
 				env_run(&envs[j]);
 			}
 		} 
-	}
+	}*/
 	if (curenv && (curenv->env_status == ENV_RUNNING)) {
 		env_run(curenv);
 	}
