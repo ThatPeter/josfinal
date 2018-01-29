@@ -7,11 +7,11 @@
 #include <inc/string.h>
 #include <kern/cpu.h>
 #include <kern/spinlock.h>
-#include <kern/mutexlock.h>
+//#include <kern/mutexlock.h>
 #include <kern/kdebug.h>
 
 //Lab 7: Multithreading
-struct Env *thread;	// thread
+struct Env *owner_thread;	// thread
 
 // The big kernel lock
 struct spinlock kernel_lock = {
@@ -120,20 +120,21 @@ spin_unlock(struct spinlock *lk)
 }
 
 //LAB 7: Multithreading
+/*
 
 //vlozenie threadu do fronty
 static void 
 queue_insert(struct mutexlock *lk)
 {
-	struct queue *newqueue; //nie som si ista ci je to dobry zapis
-	lk->newqueue=(struct queue*)malloc(sizeof(struct queue)); //s lk ??
-	lk->newqueue->data = thread->env_id; //musim tam mat lk, vsak
-	lk->newqueue->next = NULL;
+	struct queue *newItem; //nie som si ista ci je to dobry zapis
+	lk->newItem=(struct queue*)malloc(sizeof(struct queue)); //s lk ??
+	lk->newItem->data = thread->env_id; //musim tam mat lk, vsak
+	lk->newItem->next = NULL;
 	if(lk->queue->head == NULL)
-		lk->queue->head = lk->queue->tail = newqueue;
+		lk->queue->head = lk->queue->tail = newItem;
 	else {
-		lk->queue->head->next = newqueue;
-		lk->queue->tail = newqueue;
+		lk->queue->head->next = newItem;
+		lk->queue->tail = newItem;
 	}
 	lk->owner_thread->env_id = ENV_RUNNABLE; //thread je vlozeny do fronty, caka
 	printf("\n thread je vo fronte \n");
@@ -156,12 +157,23 @@ queue_remove(struct mutexlock *lk)
 }
 
 int
+mutex_init(struct mutexlock *lk, ....nieco)
+{
+	ak sa podari{
+		return 0;
+	}
+	return -1;
+}
+
+int
 mutex_lock(struct mutexlock *lk)
 {
 
 	if (xchg(&lk->locked, 1) == 0){
 		lk->locked=1;
 		lk->owner_thread->env_status = ENV_RUNNING; 
+		lk->cpu = thiscpu;
+		get_caller_pcs(lk->pcs);
 	}
 	else
 		queue_insert(lk);
@@ -180,4 +192,4 @@ mutex_unlock(struct mutexlock *lk)
 		queue_remove(lk);
 
 	return lk->locked;
-}
+}*/
