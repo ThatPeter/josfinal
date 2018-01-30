@@ -471,6 +471,7 @@ sys_ipc_recv(void *dstva)
 	//panic("sys_ipc_recv not implemented");
 	return 0;
 }
+
 static int
 sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 {
@@ -499,15 +500,13 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 
 // Lab 7 Multithreading 
 // zavola tvorbu noveho threadu (z env.c)
+
 envid_t	
 sys_thread_create(uintptr_t func)
 {
-	cprintf("in sys thread create, eip: %x\n", func);
-
 	envid_t id = thread_create(func);
 	return id;
 }	
-
 
 void 	
 sys_thread_free(envid_t envid)

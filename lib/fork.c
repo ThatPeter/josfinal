@@ -161,89 +161,111 @@ sfork(void)
 {
 	return 0;
 }
-/*Lab 7 Multithreading 
-produce a syscall to create a thread, return its id*/
+/*Lab 7: Multithreading */
+
+//#define TRACE		// uncomment this for tracing fuction calls
+
+/*Vyvola systemove volanie pre spustenie threadu (jeho hlavnej rutiny)
+vradi id spusteneho threadu*/
 envid_t
 thread_create(void (*func)())
 {
+#ifdef TRACE
+	cprintf("in fork.c thread create. func: %x\n", func);
+#endif
 	eip = (uintptr_t )func;
-	cprintf("in fork.c thread create. func: %x\n", func);
-	
 	envid_t id = sys_thread_create((uintptr_t)thread_main);
-	cprintf("in fork.c thread create. func: %x\n", func);
+
 	return id;
 }
 
 void 	
 thread_interrupt(envid_t thread_id) 
 {
+#ifdef TRACE
+	cprintf("in fork.c thread interrupt. thread id: %d\n", thread_id);
+#endif
 	sys_thread_free(thread_id);
 }
 
 void 
 thread_join(envid_t thread_id) 
 {
+#ifdef TRACE
+	cprintf("in fork.c thread join. thread id: %d\n", thread_id);
+#endif
 	sys_thread_join(thread_id);
 }
 
 /*Lab 7: Multithreading - mutex*/
 
+// Funckia prida environment na koniec zoznamu cakajucich threadov
 void 
-queue_append(envid_t envid, struct waiting_queue* queue) {
+queue_append(envid_t envid, struct waiting_queue* queue) 
+{
+#ifdef TRACE
+		cprintf("Appending an env (envid: %d)\n", envid);
+#endif
 	struct waiting_thread* wt = NULL;
+
 	int r = sys_page_alloc(envid,(void*) wt, PTE_P | PTE_W | PTE_U);
 	if (r < 0) {
 		panic("%e\n", r);
 	}	
+
 	wt->envid = envid;
-	cprintf("In append - envid: %d\nqueue first: %x\n", wt->envid, queue->first);
+
 	if (queue->first == NULL) {
-		cprintf("In append queue is empty\n");
 		queue->first = wt;
 		queue->last = wt;
 		wt->next = NULL;
 	} else {
-		cprintf("In append queue is not empty\n");
 		queue->last->next = wt;
 		wt->next = NULL;
 		queue->last = wt;
 	}
 }
 
+// Funckia vyberie prvy env zo zoznamu cakajucich. POZOR! TATO FUNKCIA BY SA NEMALA
+// NIKDY VOLAT AK JE ZOZNAM PRAZDNY!
 envid_t 
-queue_pop(struct waiting_queue* queue) {
+queue_pop(struct waiting_queue* queue) 
+{
+
 	if(queue->first == NULL) {
-		panic("queue empty!\n");
+		panic("mutex waiting list empty!\n");
 	}
 	struct waiting_thread* popped = queue->first;
 	queue->first = popped->next;
 	envid_t envid = popped->envid;
-	cprintf("In popping queue - id: %d\n", envid);
+#ifdef TRACE
+	cprintf("Popping an env (envid: %d)\n", envid);
+#endif
 	return envid;
 }
 
+/*Funckia zamkne mutex - atomickou operaciou xchg sa vymeni hodnota stavu "locked"
+v pripade, ze sa vrati 0 a necaka nikto na mutex, nastavime vlastnika na terajsi env
+v opacnom pripade sa appendne tento env na koniec zoznamu a nastavi sa na NOT RUNNABLE*/
 void 
 mutex_lock(struct Mutex* mtx)
 {
 	if ((xchg(&mtx->locked, 1) != 0) && mtx->queue->first == 0) {
-		/*if we failed to acquire the lock, set our status to not runnable 
-		and append us to the waiting list*/	
-		cprintf("IN MUTEX LOCK, fAILED TO LOCK2\n");
 		queue_append(sys_getenvid(), mtx->queue);		
 		int r = sys_env_set_status(sys_getenvid(), ENV_NOT_RUNNABLE);	
+
 		if (r < 0) {
 			panic("%e\n", r);
 		}
 		sys_yield();
-	} 
-		
-	else {cprintf("IN MUTEX LOCK, SUCCESSFUL LOCK\n");
-	mtx->owner = sys_getenvid();}
-	
-	/*if we acquired the lock, silently return (do nothing)*/
-	return;
+	} else {
+		mtx->owner = sys_getenvid();
+	}
 }
 
+/*Odomykanie mutexu - zamena hodnoty locked na 0 (odomknuty), v pripade, ze zoznam
+cakajucich nie je prazdny, popne sa env v poradi, nastavi sa ako owner threadu a
+tento thread sa nastavi ako runnable, na konci zapauzujeme*/
 void 
 mutex_unlock(struct Mutex* mtx)
 {
@@ -257,11 +279,10 @@ mutex_unlock(struct Mutex* mtx)
 		}
 	}
 
-	asm volatile("pause");
-	//sys_yield();
+	//asm volatile("pause"); 	// might be useless here
 }
 
-
+/*inicializuje mutex - naalokuje pren volnu stranu a nastavi pociatocne hodnoty na 0 alebo NULL*/
 void 
 mutex_init(struct Mutex* mtx)
 {	int r;
@@ -274,12 +295,16 @@ mutex_init(struct Mutex* mtx)
 	mtx->owner = 0;
 }
 
+// znici mutex - odstrani vsetky cakajuce thready z queue a nastavi ich ako runnable, vynuluje mutex
 void 
 mutex_destroy(struct Mutex* mtx)
 {
-	int r = sys_page_unmap(sys_getenvid(), mtx);
-	if (r < 0) {
-		panic("%e\n", r);
+	while (mtx->queue->first != NULL) {
+		sys_env_set_status(queue_pop(mtx->queue), ENV_RUNNABLE);
+		mtx->queue->first = mtx->queue->first->next;
 	}
+
+	memset(mtx, 0, PGSIZE);
+	mtx = NULL;
 }
 
