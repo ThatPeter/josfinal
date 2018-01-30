@@ -68,6 +68,29 @@ void 	sys_thread_join(envid_t envid);
 
 extern volatile uintptr_t eip;
 
+struct waiting_thread {
+	envid_t envid;
+	struct waiting_thread* next;
+};
+
+struct waiting_queue {
+	struct waiting_thread* first;
+	struct waiting_thread* last;
+};
+
+struct Mutex {
+	unsigned locked;      
+	struct waiting_queue* queue;
+	envid_t owner;
+};
+
+void mutex_init(struct Mutex* mtx);
+void mutex_destroy(struct Mutex* mtx);
+void mutex_lock(struct Mutex* mtx);
+void mutex_unlock(struct Mutex* mtx);
+
+
+
 // This must be inlined.  Exercise for reader: why?
 static inline envid_t __attribute__((always_inline))
 sys_exofork(void)
@@ -94,6 +117,10 @@ void    thread_join(envid_t thread_id);
 void 	thread_interrupt(envid_t thread_id);
 
 void 	thread_main();
+
+
+void mutex_lock(struct Mutex* mtx);
+void mutex_unlock(struct Mutex* mtx);
 
 // fd.c
 int	close(int fd);

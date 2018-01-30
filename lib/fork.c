@@ -2,6 +2,7 @@
 
 #include <inc/string.h>
 #include <inc/lib.h>
+#include <inc/x86.h>
 
 // PTE_COW marks copy-on-write page table entries.
 // It is one of the bits explicitly allocated to user processes (PTE_AVAIL).
@@ -183,5 +184,102 @@ void
 thread_join(envid_t thread_id) 
 {
 	sys_thread_join(thread_id);
+}
+
+/*Lab 7: Multithreading - mutex*/
+
+void 
+queue_append(envid_t envid, struct waiting_queue* queue) {
+	struct waiting_thread* wt = NULL;
+	int r = sys_page_alloc(envid,(void*) wt, PTE_P | PTE_W | PTE_U);
+	if (r < 0) {
+		panic("%e\n", r);
+	}	
+	wt->envid = envid;
+	cprintf("In append - envid: %d\nqueue first: %x\n", wt->envid, queue->first);
+	if (queue->first == NULL) {
+		cprintf("In append queue is empty\n");
+		queue->first = wt;
+		queue->last = wt;
+		wt->next = NULL;
+	} else {
+		cprintf("In append queue is not empty\n");
+		queue->last->next = wt;
+		wt->next = NULL;
+		queue->last = wt;
+	}
+}
+
+envid_t 
+queue_pop(struct waiting_queue* queue) {
+	if(queue->first == NULL) {
+		panic("queue empty!\n");
+	}
+	struct waiting_thread* popped = queue->first;
+	queue->first = popped->next;
+	envid_t envid = popped->envid;
+	cprintf("In popping queue - id: %d\n", envid);
+	return envid;
+}
+
+void 
+mutex_lock(struct Mutex* mtx)
+{
+	if ((xchg(&mtx->locked, 1) != 0) && mtx->queue->first == 0) {
+		/*if we failed to acquire the lock, set our status to not runnable 
+		and append us to the waiting list*/	
+		cprintf("IN MUTEX LOCK, fAILED TO LOCK2\n");
+		queue_append(sys_getenvid(), mtx->queue);		
+		int r = sys_env_set_status(sys_getenvid(), ENV_NOT_RUNNABLE);	
+		if (r < 0) {
+			panic("%e\n", r);
+		}
+		sys_yield();
+	} 
+		
+	else {cprintf("IN MUTEX LOCK, SUCCESSFUL LOCK\n");
+	mtx->owner = sys_getenvid();}
+	
+	/*if we acquired the lock, silently return (do nothing)*/
+	return;
+}
+
+void 
+mutex_unlock(struct Mutex* mtx)
+{
+	xchg(&mtx->locked, 0);
+	
+	if (mtx->queue->first != NULL) {
+		mtx->owner = queue_pop(mtx->queue);
+		int r = sys_env_set_status(mtx->owner, ENV_RUNNABLE);
+		if (r < 0) {
+			panic("%e\n", r);
+		}
+	}
+
+	asm volatile("pause");
+	//sys_yield();
+}
+
+
+void 
+mutex_init(struct Mutex* mtx)
+{	int r;
+	if ((r = sys_page_alloc(sys_getenvid(), mtx, PTE_P | PTE_W | PTE_U)) < 0) {
+		panic("panic at mutex init: %e\n", r);
+	}	
+	mtx->locked = 0;
+	mtx->queue->first = NULL;
+	mtx->queue->last = NULL;
+	mtx->owner = 0;
+}
+
+void 
+mutex_destroy(struct Mutex* mtx)
+{
+	int r = sys_page_unmap(sys_getenvid(), mtx);
+	if (r < 0) {
+		panic("%e\n", r);
+	}
 }
 

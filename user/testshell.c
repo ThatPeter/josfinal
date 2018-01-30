@@ -1,14 +1,17 @@
 #include <inc/x86.h>
 #include <inc/lib.h>
 
-//TESTING THREADS CUZ I CANT DO MAKEFILES
-
+struct Mutex* mtx;
+int global;
 void func()
 {	
 	int i;
 	for(i = 0; i < 10; i++)
 	{
-		cprintf("HI\n");
+	mutex_lock(mtx);
+		cprintf("global++: %d\n", global++);
+
+	mutex_unlock(mtx);
 	}
 }
 
@@ -24,10 +27,13 @@ void test()
 
 void
 umain(int argc, char **argv)
-{
-	envid_t id = thread_create(func);
+{	
+global = 0;
+	mutex_init(mtx);
+ 	envid_t id = thread_create(func);
+	envid_t id2 = thread_create(func);
 	thread_join(id);
-cprintf("\nTHREAD CREATE RETURNED: %d\n\n", id);
+	thread_join(id2);
 	/*envid_t id2 = thread_create(test);
 	thread_create(func);
 	thread_create(test);

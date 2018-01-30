@@ -8,6 +8,7 @@
 #include <kern/cpu.h>
 #include <kern/spinlock.h>
 #include <kern/kdebug.h>
+#include <kern/env.h>
 
 // The big kernel lock
 struct spinlock kernel_lock = {
@@ -114,3 +115,4 @@ spin_unlock(struct spinlock *lk)
 	// gcc will not reorder C statements across the xchg.
 	xchg(&lk->locked, 0);
 }
+
