@@ -7,11 +7,13 @@ int global;
 void func()
 {	
 	int i;
-	for(i = 0; i < 10; i++)
+	for(i = 0; i < 20; i++)
 	{
 		mutex_lock(mtx);
-		//("curenv: %d\n", sys_getenvid());
-		cprintf("global++: %d\n", global++);
+		cprintf("curenv: %d\n", sys_getenvid());
+		sys_yield();
+		cprintf("curenv: %d\n", sys_getenvid());
+		//cprintf("global++: %d\n", global++);
 		//mutex_destroy(mtx);		
 		mutex_unlock(mtx);
 	}
@@ -33,7 +35,10 @@ umain(int argc, char **argv)
 	mutex_init(mtx);
  	envid_t id = thread_create(func);
 	envid_t id2 = thread_create(func);
+	envid_t id3 = thread_create(func);
 	thread_join(id);
+
 	thread_join(id2);
+	thread_join(id3);
 	//mutex_destroy(mtx);
 }

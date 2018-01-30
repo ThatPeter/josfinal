@@ -726,10 +726,13 @@ thread_create(uintptr_t func)
 			curenv->worker_threads[0][i] = e->env_id;	
 			break;
 		}
-		if(i == MAX_PROCESS_THREADS - 1) {
+		
+	}
+
+	if(i == MAX_PROCESS_THREADS) {
 			cprintf("MAXIMUM NUMBERS OF THREADS PER PROCESS REACHED - ROLLBACK ALLOCATION\n");
 			e->env_status = ENV_FREE;
-		}
+			return -1;
 	}
 
 	e->env_pgdir = curenv->env_pgdir;

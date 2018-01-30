@@ -250,8 +250,8 @@ v opacnom pripade sa appendne tento env na koniec zoznamu a nastavi sa na NOT RU
 void 
 mutex_lock(struct Mutex* mtx)
 {
-	if ((xchg(&mtx->locked, 1) != 0) && mtx->queue->first == 0) {
-		queue_append(sys_getenvid(), mtx->queue);		
+	if ((xchg(&mtx->locked, 1) != 0)) {
+		queue_append(sys_getenvid(), &mtx->queue);		
 		int r = sys_env_set_status(sys_getenvid(), ENV_NOT_RUNNABLE);	
 
 		if (r < 0) {
@@ -263,23 +263,29 @@ mutex_lock(struct Mutex* mtx)
 	}
 }
 
+
 /*Odomykanie mutexu - zamena hodnoty locked na 0 (odomknuty), v pripade, ze zoznam
 cakajucich nie je prazdny, popne sa env v poradi, nastavi sa ako owner threadu a
 tento thread sa nastavi ako runnable, na konci zapauzujeme*/
 void 
 mutex_unlock(struct Mutex* mtx)
 {
-	xchg(&mtx->locked, 0);
-	
-	if (mtx->queue->first != NULL) {
-		mtx->owner = queue_pop(mtx->queue);
+	while (xchg(&mtx->queueMutex, 1) == 1)
+		;
+	if (mtx->queue.first != NULL) {
+		mtx->owner = queue_pop(&mtx->queue);
+		xchg(&mtx->queueMutex, 0);
 		int r = sys_env_set_status(mtx->owner, ENV_RUNNABLE);
 		if (r < 0) {
 			panic("%e\n", r);
 		}
+	} else {
+		xchg(&mtx->queueMutex, 0);
+		xchg(&mtx->locked, 0);
 	}
-
+	
 	//asm volatile("pause"); 	// might be useless here
+	sys_yield();
 }
 
 /*inicializuje mutex - naalokuje pren volnu stranu a nastavi pociatocne hodnoty na 0 alebo NULL*/
@@ -290,8 +296,8 @@ mutex_init(struct Mutex* mtx)
 		panic("panic at mutex init: %e\n", r);
 	}	
 	mtx->locked = 0;
-	mtx->queue->first = NULL;
-	mtx->queue->last = NULL;
+	mtx->queue.first = NULL;
+	mtx->queue.last = NULL;
 	mtx->owner = 0;
 }
 
@@ -299,9 +305,9 @@ mutex_init(struct Mutex* mtx)
 void 
 mutex_destroy(struct Mutex* mtx)
 {
-	while (mtx->queue->first != NULL) {
-		sys_env_set_status(queue_pop(mtx->queue), ENV_RUNNABLE);
-		mtx->queue->first = mtx->queue->first->next;
+	while (mtx->queue.first != NULL) {
+		sys_env_set_status(queue_pop(&mtx->queue), ENV_RUNNABLE);
+		mtx->queue.first = mtx->queue.first->next;
 	}
 
 	memset(mtx, 0, PGSIZE);

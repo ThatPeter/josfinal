@@ -80,7 +80,7 @@ struct waiting_queue {
 
 struct Mutex {
 	unsigned locked;      
-	struct waiting_queue* queue;
+	struct waiting_queue queue;
 	envid_t owner;
 };
 
